@@ -11,7 +11,7 @@ Shazam: https://itunes.apple.com/us/app/shazam/id897118787?mt=12<br />
 Spotify dev account: https://spotipy.readthedocs.io/en/latest/#installation<br />
 ##Prerequisites:<br />
 
-* Pillow- Screen Grabber https://pypi.python.org/simple/pillow/ <br />
+Pillow- Screen Grabber https://pypi.python.org/simple/pillow/ <br />
 download the wheel (.whl): 5.0 for 10.11.6 and 5.1 for 10.13.4.<br />
 pip install (drag&drop downloaded wheel into your terminal to obtain the path)<br />
 pip install git+https://github.com/mpapi/lazylights@2.0<br />
@@ -20,7 +20,7 @@ pip install requests<br />
 pip install spotipy<br />
 pip install six<br />
 
-export SPOTIPY_CLIENT_ID='your ID'
-export SPOTIPY_CLIENT_SECRET='your password'
+export SPOTIPY_CLIENT_ID='your ID'<br />
+export SPOTIPY_CLIENT_SECRET='your password'<br />
 
 

@@ -1,5 +1,5 @@
 # mic2Lifx
-Sync connected light bulbs to your music (microphone)
+Sync connected light bulbs to your music (microphone).<br />
 How does it work?<br />
 -If iTunes is playing, LIFX is synced with song's BPM (you can calculate BPM thanks to Mixxx app https://www.mixxx.org/).<br />
 -If itunes is not playing or no BPM have been detected, This software detect BPMs with your microphone!<br />

@@ -1,5 +1,5 @@
 #the goal is to have only while state of itunes doesn't change
-
+#if "no module Foundation" error, try running with /usr/bin/python2.7
 import lazylights
 import time
 from PIL import ImageGrab

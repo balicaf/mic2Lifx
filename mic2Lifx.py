@@ -1,5 +1,5 @@
 #the goal is to have only while state of itunes doesn't change
-#if "no module Foundation" error, try running with /usr/bin/python2.7
+
 import lazylights
 import time
 from PIL import ImageGrab
@@ -17,13 +17,14 @@ import spotipy
 import spotipy.oauth2 as oauth2
 import os
 import re
+from Tkinter import * #graphical interface
 
 
 
 KELVIN = 0  # 2000 to 8000, where 2000 is the warmest and 8000 is the coolest
 DECIMATE = 9  # skip every DECIMATE number of pixels to speed up calculation
 DURATION = 3000  # The time over which to change the colour of the lights in ms. Use 100 for faster transitions
-SLOW_DOWN = 0.5  # integer to decrease stroboscopic effect
+SLOW_DOWN = 1  # integer to decrease stroboscopic effect
 bpmTrack = 0  # bpm output of Itunes
 bpm = 100  # bpm that will be the input of LIFX
 qSpotify_last = ""  #it stores the last shazam ong identified
@@ -31,7 +32,7 @@ shazamChangedTime = 0  # to know if it's been more than 4 minutes than the song 
 iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")
 previousSong = iTunes.currentTrack().name()  #intialisation
 pathSQL = os.path.expanduser("~/Library/Group Containers/4GWDBCF5A4.group.com.shazam/com.shazam.mac.Shazam/ShazamDataModel.sqlite")
-
+sliderValue = 0  # graphical interface
 
 """
 # I use this to manually create a bulb using IP and MAC address.
@@ -40,9 +41,21 @@ def createBulb(ip, macString, port=56700):
 """
 def main():
 	print("hello world")
+	graphInterfaceInit()
 	BPMCalculator()
 	lightChanger()
 
+def graphInterfaceInit():
+	global w
+	master = Tk()
+	w = Scale(master, from_=0, to=100)
+	w.pack()
+
+def graphInterfaceUpdate():
+	global w
+	global sliderValue
+	w.update()
+	sliderValue = w.get()
 def getShazamSong():
 	global pathSQL
 	connection = sqlite3.connect(pathSQL)
@@ -72,6 +85,8 @@ def getShazamSong():
 
 
 def getSpotifyBPM():
+	global sliderValue
+	global beginBPM
 	qSpotify = getShazamSong()
 	credentials = oauth2.SpotifyClientCredentials(
 			client_id=os.environ['SPOTIPY_CLIENT_ID'],
@@ -83,7 +98,12 @@ def getSpotifyBPM():
 	for i, t in enumerate(results['tracks']['items']):
 		idTrack = t['id']
 		features = sp.audio_features([idTrack])
-	print("BPM spotify: ",features[0]['tempo'])
+	try:
+		print("BPM spotify: ",features[0]['tempo'])
+		print("w1.get()", sliderValue)
+		print("beginBPMSlidder", beginBPMSlidder)
+	except:
+		print("features not get from spotify?")	
 	return (features[0]['tempo']) #(features['tempo'] not dict, 10th place
 
 def shazamChanged():
@@ -140,7 +160,9 @@ def BPMCalculator():
 
 
 def lightChanger():
+	global sliderValue
 	global bpm
+	global beginBPMSlidder
 	# Scan for 2 bulbs
 	bulbs = lazylights.find_bulbs(expected_bulbs=2, timeout=5)
 	bulb0 = list(bulbs)[0]
@@ -174,9 +196,11 @@ def lightChanger():
 	cReg = Color(rgb=(1, 0, 0))
 	global cHue
 	cHue = cReg.hue
+	sliderValueReg = sliderValue
 
 	# the music changed
 	while True:
+		graphInterfaceUpdate()
 		if bpm != 0:
 			beatLenght = SLOW_DOWN * 60000.0 / bpm
 		else:
@@ -185,7 +209,7 @@ def lightChanger():
 		if beatLenghtReg != beatLenght:
 			beginBPM = time.time()
 			countBeat = 0
-			beatLenghtReg = beatLenght
+			beatLenghtReg = beatLenght 
 			print ("music changed BPM is now: ", bpm)
 		# no music is playing (e.g. pause or just only watching youtube music)
 		elif (beatLenght == DURATION):  #i.e. bpm == 0
@@ -199,8 +223,12 @@ def lightChanger():
 		# 31ea4e
 		# while music is playing
 		else:
+			#if sliderValue != sliderValueReg
+			beginBPMSlidder = beginBPM + sliderValue * beatLenght / 100000  #slider value is 0->100 
+
+				#sliderValueReg = sliderValueReg
 			# this is the same music
-			a = (beatLenght / 1000) - (time.time() - beginBPM) % (beatLenght / 1000.0)
+			a = (beatLenght / 1000) - (time.time() - beginBPMSlidder) % (beatLenght / 1000.0)
 			a = max(0, a)
 			time.sleep(a)  # should not sleep if 0
 			countBeat += 1

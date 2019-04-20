@@ -26,7 +26,7 @@ DECIMATE = 9  # skip every DECIMATE number of pixels to speed up calculation
 DURATION = 3000  # The time over which to change the colour of the lights in ms. Use 100 for faster transitions
 SLOW_DOWN = 1  # integer to decrease stroboscopic effect
 bpmTrack = 0  # bpm output of Itunes
-bpm = 100  # bpm that will be the input of LIFX
+bpm = 128  # bpm that will be the input of LIFX
 qSpotify_last = ""  #it stores the last shazam ong identified
 shazamChangedTime = 0  # to know if it's been more than 4 minutes than the song has begun to play
 iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")
@@ -87,6 +87,7 @@ def getShazamSong():
 def getSpotifyBPM():
 	global sliderValue
 	global beginBPM
+	global bpm
 	qSpotify = getShazamSong()
 	credentials = oauth2.SpotifyClientCredentials(
 			client_id=os.environ['SPOTIPY_CLIENT_ID'],
@@ -104,8 +105,10 @@ def getSpotifyBPM():
 		print("beginBPMSlidder", beginBPMSlidder)
 	except:
 		print("features not get from spotify?")	
-	return (features[0]['tempo']) #(features['tempo'] not dict, 10th place
-
+	try:	
+		return (features[0]['tempo']) #(features['tempo'] not dict, 10th place
+	except:
+		return (bpm) #standart bpm
 def shazamChanged():
 		global qSpotify_last
 		global shazamChangedTime

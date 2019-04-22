@@ -1,9 +1,6 @@
-#the goal is to have only while state of itunes doesn't change
-
 import lazylights
 import time
 from PIL import ImageGrab
-# from PIL import Image
 import os
 from colour import Color
 import sys
@@ -19,14 +16,12 @@ import os
 import re
 from Tkinter import * #graphical interface
 
-
-
-KELVIN = 0  # 2000 to 8000, where 2000 is the warmest and 8000 is the coolest
-DECIMATE = 9  # skip every DECIMATE number of pixels to speed up calculation
+KELVIN = 0  # 0 nothing applied i.e. 6500K. [2000 to 8000], where 2000 is the warmest and 8000 is the coolest
+INTENSITY = 1 #Amplitude of the light, 1 is the max 0 the min
 DURATION = 3000  # The time over which to change the colour of the lights in ms. Use 100 for faster transitions
 SLOW_DOWN = 1  # integer to decrease stroboscopic effect
 bpmTrack = 0  # bpm output of Itunes
-bpm = 128  # bpm that will be the input of LIFX
+bpm = 0  # bpm that will be the input of LIFX
 qSpotify_last = ""  #it stores the last shazam ong identified
 shazamChangedTime = 0  # to know if it's been more than 4 minutes than the song has begun to play
 iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")
@@ -41,21 +36,28 @@ def createBulb(ip, macString, port=56700):
 """
 def main():
 	print("hello world")
-	graphInterfaceInit()
-	BPMCalculator()
-	lightChanger()
+	graphInterfaceInit() # slidder to mannualy control the begging of the beats
+	BPMCalculator() #output music bpm
+	lightChanger() #loop to change light according to bpms
 
 def graphInterfaceInit():
-	global w
+	global w, w2
 	master = Tk()
-	w = Scale(master, from_=0, to=100)
+	w = Scale(master, from_=0, to=100,length=600)
 	w.pack()
+	w2 = Scale(master, from_=1, to=16,length=600,tickinterval=1, orient=HORIZONTAL)
+	w2.set(4)
+	w2.pack()
 
 def graphInterfaceUpdate():
-	global w
+	global w, w2
 	global sliderValue
+	global SLOW_DOWN
 	w.update()
 	sliderValue = w.get()
+	w2.update()
+	SLOW_DOWN = (w2.get())/4.0
+
 def getShazamSong():
 	global pathSQL
 	connection = sqlite3.connect(pathSQL)
@@ -81,9 +83,6 @@ def getShazamSong():
 	print("shazam info to spotify: ", qSpotify)
 	return qSpotify
 
-
-
-
 def getSpotifyBPM():
 	global sliderValue
 	global beginBPM
@@ -92,7 +91,6 @@ def getSpotifyBPM():
 	credentials = oauth2.SpotifyClientCredentials(
 			client_id=os.environ['SPOTIPY_CLIENT_ID'],
 			client_secret=os.environ['SPOTIPY_CLIENT_SECRET'])
-
 	token = credentials.get_access_token()
 	sp = spotipy.Spotify(auth=token)#if not t['name']:
 	results = sp.search(q=qSpotify, limit=1)
@@ -121,9 +119,6 @@ def shazamChanged():
 		else:
 			shazamChanged = False
 
-
-
-
 def spotify2BPM():
 	global bpm
 	global shazamChanged
@@ -133,9 +128,6 @@ def spotify2BPM():
 		bpm = getSpotifyBPM()
 	elif time.time() - shazamChangedTime > 240:  #it's been too long since the last music, switch to colorWheel
 		bpm = 0
-
-
-
 
 def BPMCalculator():
 	threading.Timer(8.0, BPMCalculator).start()
@@ -158,10 +150,6 @@ def BPMCalculator():
 		#bpmTrack != 0:
 		bpm = bpmTrack
 
-
-
-
-
 def lightChanger():
 	global sliderValue
 	global bpm
@@ -174,21 +162,17 @@ def lightChanger():
 	# now bulbs can be called by their names
 	bulbs_by_name = {state.label.strip(" \x00"): state.bulb
 					 for state in lazylights.get_state(bulbs)}
-
 	if (len(bulbs) == 0):
 		print ("No LIFX bulbs found. Make sure you're on the same WiFi network and try again")
 		sys.exit(1)
-
 	# turn on
 	lazylights.set_power(bulbs, True)
 	# do nothing during a tenth of a second
 	time.sleep(0.1)
-
 	# init counters/accumulators
 	red = 0
 	green = 0
 	blue = 0
-
 	redReg = 0
 	greenReg = 0
 	blueReg = 0
@@ -200,7 +184,6 @@ def lightChanger():
 	global cHue
 	cHue = cReg.hue
 	sliderValueReg = sliderValue
-
 	# the music changed
 	while True:
 		graphInterfaceUpdate()
@@ -231,11 +214,12 @@ def lightChanger():
 
 				#sliderValueReg = sliderValueReg
 			# this is the same music
-			a = (beatLenght / 1000) - (time.time() - beginBPMSlidder) % (beatLenght / 1000.0)
+			a = (beatLenght / 1000) - (time.time() - 2.0 * beginBPMSlidder) % (beatLenght / 1000.0)
 			a = max(0, a)
 			time.sleep(a)  # should not sleep if 0
 			countBeat += 1
 			red = random.uniform(0, 1)
+			#find RGB that is not looking the same as the previous RGB
 			while abs(red - redReg) < 0.15:
 				red = random.uniform(0, 1)
 			while abs(blue - blueReg) < 0.15:
@@ -247,20 +231,15 @@ def lightChanger():
 
 			# on even numbers, first lifx is light on
 			if countBeat % 2 == 0:
-				lazylights.set_state(bulbs, cReg.hue * 360, cReg.saturation, 1, KELVIN, 0, False)
+				lazylights.set_state(bulbs, cReg.hue * 360, cReg.saturation, INTENSITY, KELVIN, 0, False)
 			# on odd numbers it is the other one
 			else:
 				cReg = c
 				redReg = red  # save each previous color
 				blueReg = blue
 				greenReg = green
-				lazylights.set_state(bulbs, c.hue * 360, c.saturation, 1, KELVIN, 0, False)
+				lazylights.set_state(bulbs, c.hue * 360, c.saturation, INTENSITY, KELVIN, 0, False)
 		# lazylights.set_state(bulbs,c.hue*360,(2+c.saturation)/3,1,KELVIN,(DURATION),False)#c.luminance
-
-
-
-
-
 
 if __name__ == '__main__':
     main()

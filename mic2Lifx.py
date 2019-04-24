@@ -1,3 +1,6 @@
+#Todo: Change global var with getter and setter function (OOP)
+#Todo: make the code nicer with Pep8 & pylint
+
 import lazylights
 import time
 from PIL import ImageGrab

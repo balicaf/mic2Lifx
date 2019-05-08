@@ -217,7 +217,7 @@ def lightChanger():
 
 				#sliderValueReg = sliderValueReg
 			# this is the same music
-			a = (beatLenght / 1000) - (time.time() - 2.0 * beginBPMSlidder) % (beatLenght / 1000.0)
+			a = (beatLenght / 1000) - (time.time() - beginBPMSlidder) % (beatLenght / 1000.0)
 			a = max(0, a)
 			time.sleep(a)  # should not sleep if 0
 			countBeat += 1

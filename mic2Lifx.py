@@ -30,6 +30,7 @@ shazamChangedTime = 0  # to know if it's been more than 4 minutes than the song 
 iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")
 previousSong = iTunes.currentTrack().name()  #intialisation
 pathSQL = os.path.expanduser("~/Library/Group Containers/4GWDBCF5A4.group.com.shazam/com.shazam.mac.Shazam/ShazamDataModel.sqlite")
+#cd ~/Library/Group\ Containers/4GWDBCF5A4.group.com.shazam/com.shazam.mac.Shaza
 sliderValue = 0  # graphical interface
 
 """

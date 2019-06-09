@@ -159,7 +159,7 @@ def lightChanger():
 	global bpm
 	global beginBPMSlidder
 	# Scan for 2 bulbs
-	bulbs = lazylights.find_bulbs(expected_bulbs=2, timeout=5)
+	bulbs = lazylights.find_bulbs(expected_bulbs=4, timeout=5)
 	bulb0 = list(bulbs)[0]
 	bulb1 = list(bulbs)[1]
 	print(bulb1)

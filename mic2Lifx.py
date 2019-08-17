@@ -1,8 +1,10 @@
 #Todo: Change global var with getter and setter function (OOP)
 #Todo: make the code nicer with Pep8 & pylint
+#to run it, if you have a foundation not found (and pip pyobjc is not working) ...
+#... try /usr/bin/python ~/Documents/GitHub/mic2Lifx/mic2Lifx.py
 
-#sudo pip install pyobjc
 
+import objc
 import lazylights
 import time
 from PIL import ImageGrab

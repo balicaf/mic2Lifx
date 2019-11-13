@@ -51,9 +51,9 @@ def main():
 def graphInterfaceInit():
 	global w, w2
 	master = Tk()
-	w = Scale(master, from_=0, to=100,length=600)
+	w = Scale(master, from_=0, to=100,length=600, label='shift one beat per -50- ')
 	w.pack()
-	w2 = Scale(master, from_=1, to=16,length=600,tickinterval=1, orient=HORIZONTAL)
+	w2 = Scale(master, from_=1, to=16,length=600,tickinterval=1, orient=HORIZONTAL, label='-4- normal, -2- blinks twice faster, -8- slower')
 	w2.set(4)
 	w2.pack()
 
@@ -165,8 +165,7 @@ def lightChanger():
 	# Scan for 2 bulbs
 	bulbs = lazylights.find_bulbs(expected_bulbs=4, timeout=5)
 	bulb0 = list(bulbs)[0]
-	bulb1 = list(bulbs)[1]
-	print(bulb1)
+	print(bulb0)
 	# now bulbs can be called by their names
 	bulbs_by_name = {state.label.strip(" \x00"): state.bulb
 					 for state in lazylights.get_state(bulbs)}
@@ -218,7 +217,8 @@ def lightChanger():
 		# while music is playing
 		else:
 			#if sliderValue != sliderValueReg
-			beginBPMSlidder = beginBPM + sliderValue * beatLenght / 100000  #slider value is 0->100 
+			beginBPMSlidder = beginBPM + 2 * sliderValue * beatLenght / 100000  #slider value is 0->100 
+			#print("beginBPMSlidder", beginBPMSlidder)
 
 				#sliderValueReg = sliderValueReg
 			# this is the same music

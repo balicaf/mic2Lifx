@@ -22,6 +22,7 @@ import spotipy.oauth2 as oauth2
 import os
 import re
 from Tkinter import * #graphical interface
+import platform #get osx version for Catalina Music app compatibility
 
 KELVIN = 0  # 0 nothing applied i.e. 6500K. [2000 to 8000], where 2000 is the warmest and 8000 is the coolest
 INTENSITY = 1 #Amplitude of the light, 1 is the max 0 the min
@@ -31,7 +32,13 @@ bpmTrack = 0  # bpm output of Itunes
 bpm = 0  # bpm that will be the input of LIFX
 qSpotify_last = ""  #it stores the last shazam ong identified
 shazamChangedTime = 0  # to know if it's been more than 4 minutes than the song has begun to play
-iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")
+
+#18.7.0 --> Mojave
+#19.2.0 --> catalina
+if  int(platform.release()[0:2])<19:
+	iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")
+else:
+	iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.Music")
 previousSong = iTunes.currentTrack().name()  #intialisation
 pathSQL = os.path.expanduser("~/Library/Group Containers/4GWDBCF5A4.group.com.shazam/com.shazam.mac.Shazam/ShazamDataModel.sqlite")
 #cd ~/Library/Group\ Containers/4GWDBCF5A4.group.com.shazam/com.shazam.mac.Shaza
@@ -141,10 +148,9 @@ def BPMCalculator():
 	threading.Timer(8.0, BPMCalculator).start()
 	global previousSong
 	global bpm
-	iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")#Music
 #	while True:
 #	time.sleep(2)
-	notPlaying = (iTunes.playerState() == 1800426352) #https://github.com/kyleneideck/BackgroundMusic/blob/master/BGMApp/BGMApp/Music%20Players/BGMMusic.m
+	notPlaying = (iTunes.playerState() == 1800426352 or iTunes.playerState() == MusicEPlSPaused) #https://github.com/kyleneideck/BackgroundMusic/blob/master/BGMApp/BGMApp/Music%20Players/BGMMusic.m
 	if notPlaying:# if Itunes is not playing music	#MusicEPlSPaused
 		spotify2BPM()
 	elif bpm == 0:

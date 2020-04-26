@@ -141,11 +141,11 @@ def BPMCalculator():
 	threading.Timer(8.0, BPMCalculator).start()
 	global previousSong
 	global bpm
-	iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")
+	iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.iTunes")#Music
 #	while True:
 #	time.sleep(2)
-	notPlaying = (iTunes.playerState() == 1800426352)
-	if notPlaying:# if Itunes is not playing music
+	notPlaying = (iTunes.playerState() == 1800426352) #https://github.com/kyleneideck/BackgroundMusic/blob/master/BGMApp/BGMApp/Music%20Players/BGMMusic.m
+	if notPlaying:# if Itunes is not playing music	#MusicEPlSPaused
 		spotify2BPM()
 	elif bpm == 0:
 		# if it is playing but no BPMs

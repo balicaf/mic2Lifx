@@ -24,8 +24,7 @@ import re
 try:
     from Tkinter import *
 except ImportError:
-    from tkinter import *
-from tkinter import * #graphical interface
+    from tkinter import * #graphical interface
 import platform #get osx version for Catalina Music app compatibility
 
 KELVIN = 0  # 0 nothing applied i.e. 6500K. [2000 to 8000], where 2000 is the warmest and 8000 is the coolest

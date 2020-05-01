@@ -21,7 +21,11 @@ import spotipy
 import spotipy.oauth2 as oauth2
 import os
 import re
-from Tkinter import * #graphical interface
+try:
+    from Tkinter import *
+except ImportError:
+    from tkinter import *
+from tkinter import * #graphical interface
 import platform #get osx version for Catalina Music app compatibility
 
 KELVIN = 0  # 0 nothing applied i.e. 6500K. [2000 to 8000], where 2000 is the warmest and 8000 is the coolest
@@ -29,7 +33,7 @@ INTENSITY = 1 #Amplitude of the light, 1 is the max 0 the min
 DURATION = 3000  # The time over which to change the colour of the lights in ms. Use 100 for faster transitions
 SLOW_DOWN = 1  # integer to decrease stroboscopic effect
 bpmTrack = 0  # bpm output of Itunes
-bpm = 0  # bpm that will be the input of LIFX
+
 qSpotify_last = ""  #it stores the last shazam ong identified
 shazamChangedTime = 0  # to know if it's been more than 4 minutes than the song has begun to play
 
@@ -40,6 +44,7 @@ if  int(platform.release()[0:2])<19:
 else:
 	iTunes = SBApplication.applicationWithBundleIdentifier_("com.apple.Music")
 previousSong = iTunes.currentTrack().name()  #intialisation
+bpm = iTunes.currentTrack().bpm()#0  # bpm that will be the input of LIFX #initialization
 pathSQL = os.path.expanduser("~/Library/Group Containers/4GWDBCF5A4.group.com.shazam/com.shazam.mac.Shazam/ShazamDataModel.sqlite")
 #cd ~/Library/Group\ Containers/4GWDBCF5A4.group.com.shazam/com.shazam.mac.Shaza
 sliderValue = 0  # graphical interface
@@ -150,10 +155,13 @@ def BPMCalculator():
 	global bpm
 #	while True:
 #	time.sleep(2)
-	notPlaying = (iTunes.playerState() == 1800426352 or iTunes.playerState() == MusicEPlSPaused) #https://github.com/kyleneideck/BackgroundMusic/blob/master/BGMApp/BGMApp/Music%20Players/BGMMusic.m
+	#print(iTunes.playerState())
+	notPlaying = (iTunes.playerState() == 1800426352)# or iTunes.playerState() == MusicEPlSPaused) #https://github.com/kyleneideck/BackgroundMusic/blob/master/BGMApp/BGMApp/Music%20Players/BGMMusic.m
 	if notPlaying:# if Itunes is not playing music	#MusicEPlSPaused
 		spotify2BPM()
+		print("not playing", notPlaying)
 	elif bpm == 0:
+		print("bpm", bpm)
 		# if it is playing but no BPMs
 		spotify2BPM()  # run shazam
 	elif iTunes.currentTrack().name() != previousSong:  #playing next_track: #i.e. iTunes.currentTrack().name not equal
@@ -169,7 +177,7 @@ def lightChanger():
 	global bpm
 	global beginBPMSlidder
 	# Scan for 2 bulbs
-	bulbs = lazylights.find_bulbs(expected_bulbs=4, timeout=5)
+	bulbs = lazylights.find_bulbs(expected_bulbs=2, timeout=5)
 	bulb0 = list(bulbs)[0]
 	print(bulb0)
 	# now bulbs can be called by their names
@@ -215,9 +223,9 @@ def lightChanger():
 
 			cHue += 0.01
 			time.sleep(0.2)  # 20 wifi commands per seconds, can be increased if no checking
-			lazylights.set_state(bulbs, (cHue + 0.5) * 360, 1, 1, KELVIN, 0200, False)
+			lazylights.set_state(bulbs, (cHue + 0.5) * 360, 1, 1, KELVIN, 200, False)
 			# LIFX 246D45
-			lazylights.set_state(bulbs, cHue * 360, 1, 1, KELVIN, 0200, False)
+			lazylights.set_state(bulbs, cHue * 360, 1, 1, KELVIN, 200, False)
 			print(cHue)
 		# 31ea4e
 		# while music is playing

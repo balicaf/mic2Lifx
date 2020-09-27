@@ -258,10 +258,29 @@ def lightChanger():
 	mac2='d0:73:d5:2c:ba:d1'
 	mac3='d0:73:d5:53:ff:a2'
 	mac4='02:0F:B5:24:6D:45'
+#Found IP address 192.168.0.45 for MAC address d0:73:d5:31:ea:4e
+#Found IP address 192.168.0.25 for MAC address d0:73:d5:2c:ba:d1
+#Found IP address 192.168.0.13 for MAC address d0:73:d5:53:ff:a2
 
-	ip1 = find_IP_address_from_MAC(mac1)
-	ip2 = find_IP_address_from_MAC(mac2)
-	ip3 = find_IP_address_from_MAC(mac3)
+#check if script is run with root priviliege (required for nmap) or without (riquiered for spotify Keys)
+	try:
+		print(os.environ['SPOTIPY_CLIENT_ID'])
+		i=0
+		print(i)
+		ip1 = sys.argv[i+1]
+		print(ip1)
+		ip2 = sys.argv[i+2]
+
+		ip3 = sys.argv[i+3]
+		
+	except:
+		print("nice")
+		exit()
+		ip1 = find_IP_address_from_MAC(mac1)
+		ip2 = find_IP_address_from_MAC(mac2)
+		ip3 = find_IP_address_from_MAC(mac3)
+		
+
 	#mac4 = find_IP_address_from_MAC('d0:73:d5:2c:ba:d1')
 
 	myBulb1 = createBulb(ip1,mac1)   

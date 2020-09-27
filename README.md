@@ -20,7 +20,9 @@ pip install colour<br />
 pip install requests<br />
 pip install spotipy<br />
 pip install six<br />
+brew install nmap
 
+#https://developer.spotify.com/documentation/general/guides/app-settings/
 export SPOTIPY_CLIENT_ID='your ID'<br />
 export SPOTIPY_CLIENT_SECRET='your password'<br />
 

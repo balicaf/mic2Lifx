@@ -2,7 +2,7 @@
 #Todo: make the code nicer with Pep8 & pylint
 #to run it, if you have a foundation not found (and pip pyobjc is not working) ...
 #... try /usr/bin/python ~/Documents/GitHub/mic2Lifx/mic2Lifx.py
-
+#brew install nmap
 
 import objc
 import lazylights
@@ -21,10 +21,12 @@ import spotipy
 import spotipy.oauth2 as oauth2
 import os
 import re
+import subprocess #findMacAdress
+import xml.etree.ElementTree as ET#findMacAdress
 try:
-    from Tkinter import *
+	from Tkinter import *
 except ImportError:
-    from tkinter import * #graphical interface
+	from tkinter import * #graphical interface
 import platform #get osx version for Catalina Music app compatibility
 
 KELVIN = 0  # 0 nothing applied i.e. 6500K. [2000 to 8000], where 2000 is the warmest and 8000 is the coolest
@@ -58,6 +60,76 @@ def main():
 	graphInterfaceInit() # slidder to mannualy control the begging of the beats
 	BPMCalculator() #output music bpm
 	lightChanger() #loop to change light according to bpms
+
+def scan_for_hosts(ip_range):
+	"""Scan the given IP address range using Nmap and return the result
+	in XML format.
+	"""
+	nmap_args = ['nmap', '-n', '-sP', '-oX', '-', ip_range]
+	#nmap_args = ['nmap', '-sn', ip_range]
+	return subprocess.check_output(nmap_args)
+
+
+def find_ip_address_for_mac_address(xml, mac_address):
+	"""Parse Nmap's XML output, find the host element with the given
+	MAC address, and return that host's IP address (or `None` if no
+	match was found).
+	"""
+	host_elems = ET.fromstring(xml).iter('host')
+	host_elem = find_host_with_mac_address(host_elems, mac_address)
+	if host_elem is not None:
+		return find_ip_address(host_elem)
+
+
+def find_host_with_mac_address(host_elems, mac_address):
+	"""Return the first host element that contains the MAC address."""
+	for host_elem in host_elems:
+		if host_has_mac_address(host_elem, mac_address):
+			return host_elem
+
+
+def host_has_mac_address(host_elem, wanted_mac_address):
+	"""Return true if the host has the given MAC address."""
+	found_mac_address = find_mac_address(host_elem)
+	return (
+		found_mac_address is not None and
+		found_mac_address.lower() == wanted_mac_address.lower()
+	)
+
+
+def find_mac_address(host_elem):
+	"""Return the host's MAC address."""
+	return find_address_of_type(host_elem, 'mac')
+
+
+def find_ip_address(host_elem):
+	"""Return the host's IP address."""
+	return find_address_of_type(host_elem, 'ipv4')
+
+
+def find_address_of_type(host_elem, type_):
+	"""Return the host's address of the given type, or `None` if there
+	is no address element of that type.
+	"""
+	address_elem = host_elem.find('./address[@addrtype="{}"]'.format(type_))
+	if address_elem is not None:
+		return address_elem.get('addr')
+
+#https://homework.nwsnet.de/releases/9577/
+def find_IP_address_from_MAC(mac_address):
+	#mac_address = mac_address #'d0:73:d5:31:ea:4e'
+	ip_range = '192.168.0.1-60'
+
+	xml = scan_for_hosts(ip_range)
+	ip_address = find_ip_address_for_mac_address(xml, mac_address)
+
+	if ip_address:
+		print('Found IP address {} for MAC address {} in IP address range {}.'
+			  .format(ip_address, mac_address, ip_range))
+		return ip_address
+	else:
+		print('No IP address found for MAC address {} in IP address range {}.'
+			  .format(mac_address, ip_range))
 
 def graphInterfaceInit():
 	global w, w2
@@ -170,15 +242,42 @@ def BPMCalculator():
 		# if it's playing and there is an associated BPM
 		#bpmTrack != 0:
 		bpm = bpmTrack
-
+def createBulb(ip, macString, port = 56700):        
+	return lazylights.Bulb(b'LIFXV2', binascii.unhexlify(macString.replace(':', '')), (ip,port))
 def lightChanger():
 	global sliderValue
 	global bpm
 	global beginBPMSlidder
 	# Scan for 2 bulbs
-	bulbs = lazylights.find_bulbs(expected_bulbs=2, timeout=5)
-	bulb0 = list(bulbs)[0]
-	print(bulb0)
+	#bulbs = lazylights.find_bulbs(expected_bulbs=4, timeout=4)
+	#bulb0 = list(bulbs)[0]
+	#print(len(bulbs))
+	#myBulb1 = createBulb('\xd0s\xd51\xeaN')  
+	#myBulb2 = createBulb('\xd0s\xd5$mE')  
+	mac1='d0:73:d5:31:ea:4e'
+	mac2='d0:73:d5:2c:ba:d1'
+	mac3='d0:73:d5:53:ff:a2'
+	mac4='02:0F:B5:24:6D:45'
+
+	ip1 = find_IP_address_from_MAC(mac1)
+	ip2 = find_IP_address_from_MAC(mac2)
+	ip3 = find_IP_address_from_MAC(mac3)
+	#mac4 = find_IP_address_from_MAC('d0:73:d5:2c:ba:d1')
+
+	myBulb1 = createBulb(ip1,mac1)   
+	myBulb2 = createBulb(ip2,mac2) 
+	myBulb3 = createBulb(ip3,mac3) 
+	#myBulb4 = createBulb(mac2,'d0:73:d5:2c:ba:d1')   
+
+	#d0:73:d5:31:ea:4e
+	#d0:73:d5:2c:ba:d1
+	#d0:73:d5:53:ff:a2
+	#02:0F:B5:24:6D:45 wtf?
+
+	#myBulb3 = createBulb('192.168.1.x','xx:xx:xx:xx:xx:xx')
+	# Bulb(gateway_mac='LIFXV2', mac='\xd0s\xd51\xeaN', addr=('192.168.0.12', 56700)),
+	# Bulb(gateway_mac='LIFXV2', mac='\xd0s\xd5$mE'   , addr=('192.168.0.14', 56700))  
+	bulbs=[myBulb1, myBulb2, myBulb3]
 	# now bulbs can be called by their names
 	bulbs_by_name = {state.label.strip(" \x00"): state.bulb
 					 for state in lazylights.get_state(bulbs)}
@@ -263,5 +362,5 @@ def lightChanger():
 		# lazylights.set_state(bulbs,c.hue*360,(2+c.saturation)/3,1,KELVIN,(DURATION),False)#c.luminance
 
 if __name__ == '__main__':
-    main()
+	main()
 

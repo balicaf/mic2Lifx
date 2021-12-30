@@ -1,1 +1,0 @@
-sudo /usr/bin/python ~/Documents/GitHub/mic2Lifx/mic2Lifx.py

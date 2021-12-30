@@ -4,7 +4,8 @@
 #... try /usr/bin/python ~/Documents/GitHub/mic2Lifx/mic2Lifx.py
 #brew install nmap
 
-import objc
+import objc#to get iTunes state
+
 import lazylights
 import time
 from PIL import ImageGrab
@@ -19,6 +20,7 @@ from ScriptingBridge import *
 import sqlite3
 import spotipy
 import spotipy.oauth2 as oauth2
+#from spotipy.oauth2 import SpotifyOAuth
 import os
 import re
 import subprocess #findMacAdress
@@ -28,7 +30,14 @@ try:
 except ImportError:
 	from tkinter import * #graphical interface
 import platform #get osx version for Catalina Music app compatibility
+from difflib import SequenceMatcher#to match if 2 artist are the same
+#for mouseMove
+from random import randint, choice
 
+import pyautogui
+
+
+tickTock = 0
 KELVIN = 0  # 0 nothing applied i.e. 6500K. [2000 to 8000], where 2000 is the warmest and 8000 is the coolest
 INTENSITY = 1 #Amplitude of the light, 1 is the max 0 the min
 DURATION = 3000  # The time over which to change the colour of the lights in ms. Use 100 for faster transitions
@@ -36,6 +45,7 @@ SLOW_DOWN = 1  # integer to decrease stroboscopic effect
 bpmTrack = 0  # bpm output of Itunes
 
 qSpotify_last = ""  #it stores the last shazam ong identified
+idName = ""
 shazamChangedTime = 0  # to know if it's been more than 4 minutes than the song has begun to play
 
 #18.7.0 --> Mojave
@@ -61,93 +71,31 @@ def main():
 	BPMCalculator() #output music bpm
 	lightChanger() #loop to change light according to bpms
 
-def scan_for_hosts(ip_range):
-	"""Scan the given IP address range using Nmap and return the result
-	in XML format.
-	"""
-	nmap_args = ['nmap', '-n', '-sP', '-oX', '-', ip_range]
-	#nmap_args = ['nmap', '-sn', ip_range]
-	return subprocess.check_output(nmap_args)
 
-
-def find_ip_address_for_mac_address(xml, mac_address):
-	"""Parse Nmap's XML output, find the host element with the given
-	MAC address, and return that host's IP address (or `None` if no
-	match was found).
-	"""
-	host_elems = ET.fromstring(xml).iter('host')
-	host_elem = find_host_with_mac_address(host_elems, mac_address)
-	if host_elem is not None:
-		return find_ip_address(host_elem)
-
-
-def find_host_with_mac_address(host_elems, mac_address):
-	"""Return the first host element that contains the MAC address."""
-	for host_elem in host_elems:
-		if host_has_mac_address(host_elem, mac_address):
-			return host_elem
-
-
-def host_has_mac_address(host_elem, wanted_mac_address):
-	"""Return true if the host has the given MAC address."""
-	found_mac_address = find_mac_address(host_elem)
-	return (
-		found_mac_address is not None and
-		found_mac_address.lower() == wanted_mac_address.lower()
-	)
-
-
-def find_mac_address(host_elem):
-	"""Return the host's MAC address."""
-	return find_address_of_type(host_elem, 'mac')
-
-
-def find_ip_address(host_elem):
-	"""Return the host's IP address."""
-	return find_address_of_type(host_elem, 'ipv4')
-
-
-def find_address_of_type(host_elem, type_):
-	"""Return the host's address of the given type, or `None` if there
-	is no address element of that type.
-	"""
-	address_elem = host_elem.find('./address[@addrtype="{}"]'.format(type_))
-	if address_elem is not None:
-		return address_elem.get('addr')
-
-#https://homework.nwsnet.de/releases/9577/
-def find_IP_address_from_MAC(mac_address):
-	#mac_address = mac_address #'d0:73:d5:31:ea:4e'
-	ip_range = '192.168.0.1-60'
-
-	xml = scan_for_hosts(ip_range)
-	ip_address = find_ip_address_for_mac_address(xml, mac_address)
-
-	if ip_address:
-		print('Found IP address {} for MAC address {} in IP address range {}.'
-			  .format(ip_address, mac_address, ip_range))
-		return ip_address
-	else:
-		print('No IP address found for MAC address {} in IP address range {}.'
-			  .format(mac_address, ip_range))
 
 def graphInterfaceInit():
-	global w, w2
+	global w, w2, w3
 	master = Tk()
 	w = Scale(master, from_=0, to=100,length=600, label='shift one beat per -50- ')
-	w.pack()
+	w.pack(side=LEFT)
+	w3 = Scale(master, from_=2000, to=8000,length=600, label='white Balance (0=6500)')
+	w3.pack(side=LEFT)
 	w2 = Scale(master, from_=1, to=16,length=600,tickinterval=1, orient=HORIZONTAL, label='-4- normal, -2- blinks twice faster, -8- slower')
 	w2.set(4)
 	w2.pack()
 
 def graphInterfaceUpdate():
-	global w, w2
-	global sliderValue
+	global w, w2, w3
+	global sliderValue, KELVIN
 	global SLOW_DOWN
 	w.update()
 	sliderValue = w.get()
+	w3.update()
+	KELVIN = w3.get()
 	w2.update()
 	SLOW_DOWN = (w2.get())/4.0
+
+
 
 def getShazamSong():
 	global pathSQL
@@ -171,26 +119,37 @@ def getShazamSong():
 		trackSpotify = trackSpotify.replace('.',' ')
 		qSpotify = " ".join(artistSpotify.split()[:2]) + ", " + " ".join(trackSpotify.split()[:3])#just the 2 first words
 	connection.close()
-	print("shazam info to spotify: ", qSpotify)
+	#print("shazam info to spotify: ", qSpotify)
 	return qSpotify
 
 def getSpotifyBPM():
 	global sliderValue
 	global beginBPM
 	global bpm
+	global idName
+	global qSpotify
 	qSpotify = getShazamSong()
 	credentials = oauth2.SpotifyClientCredentials(
 			client_id=os.environ['SPOTIPY_CLIENT_ID'],
 			client_secret=os.environ['SPOTIPY_CLIENT_SECRET'])
-	token = credentials.get_access_token()
-	sp = spotipy.Spotify(auth=token)#if not t['name']:
+	#token = credentials.get_access_token()
+	#sp = spotipy.Spotify(auth=token)#if not t['name']: #auth_manager
+	sp = spotipy.Spotify(auth_manager=credentials)#if not t['name']:
 	results = sp.search(q=qSpotify, limit=1)
 	for i, t in enumerate(results['tracks']['items']):
 		idTrack = t['id']
+		idName = (t['name']) + (t['artists'][0]['name'])
 		features = sp.audio_features([idTrack])
+
+
+	#https://pythonrepo.com/repo/plamere-spotipy-python-third-party-apis-wrappers
+	#https://dev.to/arvindmehairjan/how-to-play-spotify-songs-and-show-the-album-art-using-spotipy-library-and-python-5eki
+	#devices = sp.devices()
+	#print(json.dumps(devices, sort_keys=True, indent=4))
+	#deviceID = devices['devices'][0]['id']
+	#sp.start_playback(deviceID, None, trackSelectionList)
 	try:
 		print("BPM spotify: ",features[0]['tempo'])
-		print("w1.get()", sliderValue)
 		print("beginBPMSlidder", beginBPMSlidder)
 	except:
 		print("features not get from spotify?")	
@@ -199,26 +158,60 @@ def getSpotifyBPM():
 	except:
 		return (bpm) #standart bpm
 def shazamChanged():
+		global idName
 		global qSpotify_last
 		global shazamChangedTime
+		
 		qSpotify_cur = getShazamSong()
-		if qSpotify_cur != qSpotify_last:
-			print("modified")
+		simiSong = similar(qSpotify_cur, qSpotify_last)
+		if simiSong<0.8:#qSpotify_cur != qSpotify_last:
+			print("modified song, similarity = ", simiSong , " track name from Shazam is ", qSpotify_cur)
 			qSpotify_last = qSpotify_cur
-			shazamChanged = True
 			shazamChangedTime = time.time()
+			return True
 		else:
-			shazamChanged = False
+			return False
+
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 
 def spotify2BPM():
 	global bpm
-	global shazamChanged
 	global shazamChangedTime
-	shazamChanged()
-	if shazamChanged:
+	global tickTock #don't refresh too much, only half time is enough i.e. one shazam request per 16s
+	tickTock+=1
+	if tickTock%4 ==0:
+		print("still",150 - (time.time() - shazamChangedTime), " seconds to refresh BPM of ", bpm)
+	if shazamChanged():
 		bpm = getSpotifyBPM()
-	elif time.time() - shazamChangedTime > 240:  #it's been too long since the last music, switch to colorWheel
-		bpm = 0
+	elif time.time() - shazamChangedTime > 150:  #it's been 3 minutes, time to check if the music changed
+		if tickTock%2 ==0:
+			moveMouse()
+		if time.time() - shazamChangedTime > 240: #it's been 4min/too long since the last music, switch to colorWheel
+	
+			bpm = 0
+
+def moveMouse():
+
+    #clic to display shazam interface
+    pyautogui.moveTo(705+randint(1,5), 5+randint(1,10),randint(20,100)/100)
+    time.sleep(0.5)
+    pyautogui.click()
+    
+    
+
+    #clic to refresh shazam ID
+    pyautogui.moveTo(705+randint(1,5), 105+randint(1,10),randint(20,100)/100)
+    time.sleep(0.5)
+    pyautogui.click()
+    time.sleep(8)
+
+    #go back to previous state
+    pyautogui.moveTo(705+randint(1,5), 5+randint(1,10),randint(20,100)/100)
+    time.sleep(0.5)
+    pyautogui.click()
+    
 
 def BPMCalculator():
 	threading.Timer(8.0, BPMCalculator).start()
@@ -227,10 +220,11 @@ def BPMCalculator():
 #	while True:
 #	time.sleep(2)
 	#print(iTunes.playerState())
-	notPlaying = (iTunes.playerState() == 1800426352)# or iTunes.playerState() == MusicEPlSPaused) #https://github.com/kyleneideck/BackgroundMusic/blob/master/BGMApp/BGMApp/Music%20Players/BGMMusic.m
+	notPlaying = (iTunes.playerState() == 1800426352 or 1800426323)# or iTunes.playerState() == MusicEPlSPaused) #https://github.com/kyleneideck/BackgroundMusic/blob/master/BGMApp/BGMApp/Music%20Players/BGMMusic.m
+	
 	if notPlaying:# if Itunes is not playing music	#MusicEPlSPaused
 		spotify2BPM()
-		print("not playing", notPlaying)
+		#print("not playing", notPlaying)
 	elif bpm == 0:
 		print("bpm", bpm)
 		# if it is playing but no BPMs
@@ -242,61 +236,39 @@ def BPMCalculator():
 		# if it's playing and there is an associated BPM
 		#bpmTrack != 0:
 		bpm = bpmTrack
+
+
+
+
+
+
+
 def createBulb(ip, macString, port = 56700):        
 	return lazylights.Bulb(b'LIFXV2', binascii.unhexlify(macString.replace(':', '')), (ip,port))
 def lightChanger():
-	global sliderValue
-	global bpm
+	global sliderValue, KELVIN
+	global bpm, idName
 	global beginBPMSlidder
-	# Scan for 2 bulbs
-	#bulbs = lazylights.find_bulbs(expected_bulbs=4, timeout=4)
-	#bulb0 = list(bulbs)[0]
-	#print(len(bulbs))
-	#myBulb1 = createBulb('\xd0s\xd51\xeaN')  
-	#myBulb2 = createBulb('\xd0s\xd5$mE')  
-	mac1='d0:73:d5:31:ea:4e'
-	mac2='d0:73:d5:2c:ba:d1'
-	mac3='d0:73:d5:53:ff:a2'
-	mac4='02:0F:B5:24:6D:45'
-#Found IP address 192.168.0.45 for MAC address d0:73:d5:31:ea:4e
-#Found IP address 192.168.0.25 for MAC address d0:73:d5:2c:ba:d1
-#Found IP address 192.168.0.13 for MAC address d0:73:d5:53:ff:a2
-
-#check if script is run with root priviliege (required for nmap) or without (riquiered for spotify Keys)
-	try:
-		print(os.environ['SPOTIPY_CLIENT_ID'])
-		i=0
-		print(i)
-		ip1 = sys.argv[i+1]
-		print(ip1)
-		ip2 = sys.argv[i+2]
-
-		ip3 = sys.argv[i+3]
-		
-	except:
-		print("nice")
-		exit()
-		ip1 = find_IP_address_from_MAC(mac1)
-		ip2 = find_IP_address_from_MAC(mac2)
-		ip3 = find_IP_address_from_MAC(mac3)
-		
-
-	#mac4 = find_IP_address_from_MAC('d0:73:d5:2c:ba:d1')
+	#mac and IP MUST be associated by pair
+	mac1='' 
+	mac2=''
+	mac3=''
+	mac4=''
+	mac5=''
+	i=0
+	ip1 = sys.argv[i+1]
+	ip2 = sys.argv[i+2]
+	ip3 = sys.argv[i+3]
+	ip4 = sys.argv[i+4]
+	ip5 = sys.argv[i+5]
 
 	myBulb1 = createBulb(ip1,mac1)   
 	myBulb2 = createBulb(ip2,mac2) 
-	myBulb3 = createBulb(ip3,mac3) 
-	#myBulb4 = createBulb(mac2,'d0:73:d5:2c:ba:d1')   
+	myBulb3 = createBulb(ip3,mac3)
+	myBulb4 = createBulb(ip4,mac4) 
+	myBulb5 = createBulb(ip5,mac5)  
 
-	#d0:73:d5:31:ea:4e
-	#d0:73:d5:2c:ba:d1
-	#d0:73:d5:53:ff:a2
-	#02:0F:B5:24:6D:45 wtf?
-
-	#myBulb3 = createBulb('192.168.1.x','xx:xx:xx:xx:xx:xx')
-	# Bulb(gateway_mac='LIFXV2', mac='\xd0s\xd51\xeaN', addr=('192.168.0.12', 56700)),
-	# Bulb(gateway_mac='LIFXV2', mac='\xd0s\xd5$mE'   , addr=('192.168.0.14', 56700))  
-	bulbs=[myBulb1, myBulb2, myBulb3]
+	bulbs=[myBulb1, myBulb2, myBulb3, myBulb4, myBulb5]
 	# now bulbs can be called by their names
 	bulbs_by_name = {state.label.strip(" \x00"): state.bulb
 					 for state in lazylights.get_state(bulbs)}
@@ -334,7 +306,7 @@ def lightChanger():
 			beginBPM = time.time()
 			countBeat = 0
 			beatLenghtReg = beatLenght 
-			print ("music changed BPM is now: ", bpm)
+			print ("music changed BPM is now: ", bpm ," track name from spotify is ", idName)
 		# no music is playing (e.g. pause or just only watching youtube music)
 		elif (beatLenght == DURATION):  #i.e. bpm == 0
 
@@ -343,7 +315,7 @@ def lightChanger():
 			lazylights.set_state(bulbs, (cHue + 0.5) * 360, 1, 1, KELVIN, 200, False)
 			# LIFX 246D45
 			lazylights.set_state(bulbs, cHue * 360, 1, 1, KELVIN, 200, False)
-			print(cHue)
+			#print(cHue)
 		# 31ea4e
 		# while music is playing
 		else:

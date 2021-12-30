@@ -23,7 +23,19 @@ pip install six<br />
 brew install nmap
 
 #https://developer.spotify.com/documentation/general/guides/app-settings/
-export SPOTIPY_CLIENT_ID='your ID'<br />
-export SPOTIPY_CLIENT_SECRET='your password'<br />
+export SPOTIPY_CLIENT_ID=''
+export SPOTIPY_CLIENT_SECRET=''
+
+/usr/bin/python ~/Documents/GitHub/mic2Lifx/mic2Lifx.py 192.168.0.21 192.168.0.16 192.168.0.25 192.168.0.24 192.168.0.13
+sudo /usr/bin/python ~/Documents/GitHub/mic2Lifx/justFindIP.py
+
+/usr/bin/python ~/Documents/GitHub/mic2Lifx/mouseMove.py
+/usr/local/bin/pip install pyautogui==0.9.40
+/usr/local/bin/pip install cdifflib
+/usr/local/bin/pip install spotipy --upgrade
+
+similar("Apple","Appel")
+from difflib import SequenceMatcher
+
 
 
